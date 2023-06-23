@@ -23,6 +23,8 @@ datasets = [dataset.map(augment).batch(batch_size, drop_remainder=True) for data
 
 train_ds, val_ds = datasets
 
+print(model.summary())
+
 logdir = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
 model.compile(
     # optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=0.01),

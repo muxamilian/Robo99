@@ -5,6 +5,8 @@ from datetime import datetime
 import os
 from common import *
 
+# TODO: Double all layers
+
 noise_dim = 64
 batch_size = 32
 
@@ -120,8 +122,8 @@ class CustomModel(tf.keras.Model):
     print(self.generator.summary())
     self.discriminator = make_discriminator_model()
     print(self.discriminator.summary())
-    self.classifier_model = model
-    self.classifier_model.load_weights('logs/20230618-011800/weights.10')
+    # self.classifier_model = model
+    # self.classifier_model.load_weights('logs/20230618-011800/weights.10')
 
     self.generator_optimizer = tf.keras.optimizers.legacy.SGD(1e-2)
     self.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(1e-2)
@@ -146,29 +148,32 @@ class CustomModel(tf.keras.Model):
   def train_step(self, batch):
       images, labels = batch
       with tf.device('/cpu:0'):
-        loss_tradeoff = tf.random.uniform([batch_size], minval=0, maxval=0, dtype=tf.float32)
+        # loss_tradeoff = tf.random.uniform([batch_size], minval=0, maxval=0, dtype=tf.float32)
+        loss_tradeoff = tf.zeros([batch_size], dtype=tf.float32)
         noise = tf.random.normal([batch_size, noise_dim])
 
       tf.assert_equal(tf.shape(labels), (batch_size,))
 
       with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-          generated_images = self.generator(tf.concat([noise, tf.reshape(tf.cast(labels, tf.float32), (batch_size, 1)), tf.reshape(loss_tradeoff, (batch_size, 1))], axis=-1), training=True)
+          generated_images = self.generator(tf.concat([noise, tf.reshape(tf.cast(labels, tf.float32)/(num_chars-1), (batch_size, 1)), tf.reshape(loss_tradeoff, (batch_size, 1))], axis=-1), training=True)
 
-          tiled_labels = tf.tile(tf.reshape(tf.cast(labels, tf.float32), [batch_size, 1, 1, 1]), [1, *image_shape, 1])
+          tiled_labels = tf.tile(tf.reshape(tf.cast(labels, tf.float32)/(num_chars-1), [batch_size, 1, 1, 1]), [1, *image_shape, 1])
           real_output = self.discriminator(tf.concat([images, tiled_labels], axis=-1), training=True)
           fake_output = self.discriminator(tf.concat([generated_images, tiled_labels], axis=-1), training=True)
 
           gen_loss = self.generator_loss(fake_output)
-          augmented_imgs = \
-            tf.stack([augment((img+1)/2*255, tf.zeros([]))[0] for img in tf.unstack(generated_images, axis=0)], axis=0)
-          tf.debugging.assert_less_equal(augmented_imgs, 1.)
-          tf.debugging.assert_greater_equal(augmented_imgs, -1.)
-          class_loss = \
-            self.sparse_categorical_cross_entropy(
-              labels, 
-              self.classifier_model(augmented_imgs))
+          # augmented_imgs = \
+          #   tf.stack([augment((img+1)/2*255, tf.zeros([]))[0] for img in tf.unstack(generated_images, axis=0)], axis=0)
+          # tf.debugging.assert_less_equal(augmented_imgs, 1.)
+          # tf.debugging.assert_greater_equal(augmented_imgs, -1.)
+          # class_loss = \
+          #   self.sparse_categorical_cross_entropy(
+          #     labels, 
+          #     self.classifier_model(augmented_imgs))
+          class_loss = 0
           disc_loss = self.discriminator_loss(real_output, fake_output)
-          gen_grad_loss = (1-loss_tradeoff)*gen_loss + loss_tradeoff*class_loss
+          # gen_grad_loss = tf.reduce_mean((1-loss_tradeoff)*gen_loss + loss_tradeoff*class_loss)
+          gen_grad_loss = tf.reduce_mean(gen_loss)
 
       gradients_of_generator = gen_tape.gradient(gen_grad_loss, self.generator.trainable_variables)
       gradients_of_discriminator = disc_tape.gradient(disc_loss, self.discriminator.trainable_variables)
@@ -190,7 +195,8 @@ model = CustomModel()
 
 model.compile()
 
-steps_per_epoch = 1000
+# steps_per_epoch = 1000
+steps_per_epoch = len(dataset)
 num_epochs = 10
 
 model.fit(
