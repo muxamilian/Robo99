@@ -7,7 +7,7 @@ from common import *
 
 batch_size = 64
 
-validation_split = 0.1
+validation_split = 0.05
 datasets = tf.keras.utils.image_dataset_from_directory(
     'dataset',
     validation_split=validation_split,
@@ -52,11 +52,12 @@ plt.tight_layout()
 
 model.fit(
     train_ds, 
-    epochs=10,
+    validation_data=val_ds,
+    epochs=100,
     shuffle=False,
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(
-            os.path.join(logdir, "weights.{epoch:02d}"), verbose=1, save_weights_only=True),
+            os.path.join(logdir, "weights.{epoch:02d}"), verbose=1, save_weights_only=True, save_best_only=True, monitor='val_accuracy'),
         tf.keras.callbacks.TensorBoard(log_dir=logdir)
     ]
 )

@@ -17,5 +17,6 @@ for char_index in range(num_chars):
     for font_index in range(num_fonts):
         char = fonts[font_index,char_index,:,:]
         im = Image.fromarray(char)
-        im.save(f'datasets/{char_index}/{font_index}.png')
+        char_index_zfilled = str(char_index).zfill(len(str(num_chars)))
+        im.save(f'dataset/{char_index_zfilled}/{font_index}.png')
         pbar.update(1)
