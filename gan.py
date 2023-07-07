@@ -4,8 +4,7 @@ from datetime import datetime
 import os
 from common import *
 
-# TODO: Double all layers
-
+# dataset_name = 'dataset'
 dataset_name = 'dataset-capitals'
 if dataset_name == 'dataset-capitals':
   num_chars = 26
@@ -14,6 +13,9 @@ noise_dim = 64
 batch_size = 32
 
 multiplier = 3
+
+epochs = 30
+lr = 2e-4
 
 def make_generator_model():
   gen = tf.keras.Sequential(
@@ -93,9 +95,19 @@ class CustomCallback(tf.keras.callbacks.Callback):
     if epoch == 0:
       self.model.val_data = next(dataset.__iter__())[0]
 
+      self.model.lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(lr, epochs*batches_per_epoch)
+
+      # self.generator_optimizer = tf.keras.optimizers.legacy.SGD(1e-3)
+      # self.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(1e-3)
+      self.generator_optimizer = tf.keras.optimizers.legacy.Adam(2e-4)
+      self.discriminator_optimizer = tf.keras.optimizers.legacy.Adam(2e-4)
+
       with file_writer.as_default():
         tf.summary.image("In imgs", (self.model.val_data+1)/2, step=epoch, max_outputs=64)
             
+    with file_writer.as_default():
+      tf.summary.scalar('lr', self.model.lr_decayed_fn(epoch*batches_per_epoch), step=epoch)
+
     self.model.gen_loss_tracker.reset_states()
     self.model.disc_loss_tracker.reset_states()
     self.model.class_loss_tracker.reset_states()
@@ -127,12 +139,7 @@ class CustomModel(tf.keras.Model):
     self.discriminator = make_discriminator_model()
     print(self.discriminator.summary())
     self.classifier_model = model
-    self.classifier_model.load_weights('logs/20230630-234006/weights.56')
-
-    # self.generator_optimizer = tf.keras.optimizers.legacy.SGD(1e-3)
-    # self.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(1e-3)
-    self.generator_optimizer = tf.keras.optimizers.legacy.Adam(2e-4)
-    self.discriminator_optimizer = tf.keras.optimizers.legacy.Adam(2e-4)
+    self.classifier_model.load_weights('logs/20230704-173202/weights.47')
 
   def generate(self):
     results_tuple = []
@@ -205,12 +212,12 @@ model = CustomModel()
 model.compile()
 
 # steps_per_epoch = 1000
-steps_per_epoch = len(dataset)
+batches_per_epoch = len(dataset)
 
 model.fit(
     dataset, 
-    steps_per_epoch=steps_per_epoch,
-    epochs=int(15*(len(dataset)/steps_per_epoch)),
+    steps_per_epoch=batches_per_epoch,
+    epochs=int(epochs*(len(dataset)/batches_per_epoch)),
     shuffle=False,
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(
