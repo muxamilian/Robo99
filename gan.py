@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow_probability as tfp
 from tensorflow.keras import layers
 from datetime import datetime
 import os
@@ -9,13 +10,14 @@ dataset_name = 'dataset-capitals'
 if dataset_name == 'dataset-capitals':
   num_chars = 26
 
-noise_dim = 64
-batch_size = 32
+noise_dim = 256
+batch_size = 64
 
 multiplier = 3
 
-epochs = 30
-lr = 2e-4
+epochs = 10
+# Even lower LR?
+lr = 1e-4
 
 def make_generator_model():
   gen = tf.keras.Sequential(
@@ -45,12 +47,12 @@ def make_discriminator_model():
   disc = tf.keras.Sequential(
     [
       layers.Input(shape=(*image_shape, 1+num_chars)),
-      layers.Conv2D(multiplier*32 + 2*num_chars, (4, 4), padding='same', strides=2),
+      layers.Conv2D(multiplier*32 + 3*num_chars, (4, 4), padding='same', strides=2),
       layers.LeakyReLU(alpha=0.2),
-      layers.Conv2D(multiplier*64 + num_chars, (4, 4), padding='same', strides=2, use_bias=False),
+      layers.Conv2D(multiplier*64 + 2*num_chars, (4, 4), padding='same', strides=2, use_bias=False),
       layers.BatchNormalization(),
       layers.LeakyReLU(alpha=0.2),
-      layers.Conv2D(multiplier*128, (4, 4), padding='same', strides=2, use_bias=False),
+      layers.Conv2D(multiplier*128 + 1*num_chars, (4, 4), padding='same', strides=2, use_bias=False),
       layers.BatchNormalization(),
       layers.LeakyReLU(alpha=0.2),
       layers.Conv2D(multiplier*256, (4, 4), padding='same', strides=2, use_bias=False),
@@ -70,7 +72,7 @@ def augment_simple(image, label):
     image = image/255.*2.-1
     tf.debugging.assert_less_equal(image, 1.)
     tf.debugging.assert_greater_equal(image, -1.)
-    image = tf.clip_by_value(image, -1., 1.)
+    image = tfp.math.clip_by_value_preserve_gradient(image, -1., 1.)
     tf.debugging.assert_less_equal(image, 1.)
     tf.debugging.assert_greater_equal(image, -1.)
 
@@ -85,7 +87,13 @@ dataset = tf.keras.utils.image_dataset_from_directory(
     image_size=image_shape                                            
 ).map(augment_simple).batch(batch_size, drop_remainder=True)
 
-logdir = "gan_logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+logdir = "gan_logs/" + datetime.now().strftime("%Y%m%d-%H%M%S") + '/'
+os.makedirs(logdir, exist_ok=True)
+file_name = __file__.split('/')[-1]
+with open(__file__) as fr:
+   content = fr.read()
+with open(logdir + file_name, 'w') as fw:
+   fw.write(content)
 file_writer = tf.summary.create_file_writer(logdir)
 seed = tf.concat([tf.zeros([num_chars, noise_dim]), tf.one_hot(tf.range(0, num_chars), depth=num_chars)], axis=-1)
 
@@ -97,10 +105,12 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
       self.model.lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(lr, epochs*batches_per_epoch)
 
-      # self.generator_optimizer = tf.keras.optimizers.legacy.SGD(1e-3)
-      # self.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(1e-3)
-      self.generator_optimizer = tf.keras.optimizers.legacy.Adam(2e-4)
-      self.discriminator_optimizer = tf.keras.optimizers.legacy.Adam(2e-4)
+      # self.model.generator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
+      # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
+      # self.model.generator_optimizer = tf.keras.optimizers.legacy.Adam(self.model.lr_decayed_fn)#, beta_1=0.0)
+      # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.Adam(self.model.lr_decayed_fn)#, beta_1=0.0)
+      self.model.generator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)#, beta_1=0.0)
+      self.model.discriminator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)#, beta_1=0.0)
 
       with file_writer.as_default():
         tf.summary.image("In imgs", (self.model.val_data+1)/2, step=epoch, max_outputs=64)
@@ -144,7 +154,7 @@ class CustomModel(tf.keras.Model):
   def generate(self):
     results_tuple = []
     for tradeoff in tf.linspace(0., 1., 6):
-        generated_images = self.generator(tf.concat([seed, tf.tile(tf.reshape(tradeoff, [1, 1]), (seed.shape[0], 1))], axis=-1))
+        generated_images = self.generator(tf.concat([seed, tf.tile(tf.reshape(tradeoff, [1, 1]), (seed.shape[0], 1))], axis=-1), training=False)
         results_tuple.append((float(tradeoff), generated_images))
     return results_tuple
 
@@ -183,7 +193,7 @@ class CustomModel(tf.keras.Model):
           class_loss = \
             self.sparse_categorical_cross_entropy(
               labels, 
-              self.classifier_model(augmented_imgs))
+              self.classifier_model(augmented_imgs, training=False))
           # class_loss = 0
           disc_loss = self.discriminator_loss(real_output, fake_output)
           tf.assert_equal(tf.shape(gen_loss)[0], batch_size)

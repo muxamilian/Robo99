@@ -1,5 +1,6 @@
 import random
 import tensorflow as tf
+import tensorflow_probability as tfp
 
 physical_devices = tf.config.list_physical_devices('GPU')
 try:
@@ -41,6 +42,6 @@ def augment(image, label):
     image = tf.image.resize(image, image_shape)
     image += random_vector
     image = tf.squeeze(image, 0)
-    image = tf.clip_by_value(image, -1., 1.)
+    image = tfp.math.clip_by_value_preserve_gradient(image, -1., 1.)
 
     return image, label
