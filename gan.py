@@ -10,14 +10,13 @@ dataset_name = 'dataset-capitals'
 if dataset_name == 'dataset-capitals':
   num_chars = 26
 
-noise_dim = 256
+noise_dim = 128
 batch_size = 64
 
 multiplier = 3
 
-epochs = 10
-# Even lower LR?
-lr = 1e-4
+epochs = 30
+lr = 5e-4
 
 def make_generator_model():
   gen = tf.keras.Sequential(
@@ -73,9 +72,10 @@ def augment_simple(image, label):
     tf.debugging.assert_less_equal(image, 1.)
     tf.debugging.assert_greater_equal(image, -1.)
     image = tfp.math.clip_by_value_preserve_gradient(image, -1., 1.)
-    tf.debugging.assert_less_equal(image, 1.)
-    tf.debugging.assert_greater_equal(image, -1.)
-
+    tf.Assert(tf.reduce_any(image > 0.), [image])
+    tf.Assert(tf.reduce_any(image < 0.), [image])
+    tf.Assert(tf.reduce_all(image <= 1), [image])
+    tf.Assert(tf.reduce_all(image >= -1), [image])
     return image, label
 
 dataset = tf.keras.utils.image_dataset_from_directory(
@@ -105,12 +105,12 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
       self.model.lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(lr, epochs*batches_per_epoch)
 
-      # self.model.generator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
-      # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
+      self.model.generator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
+      self.model.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
       # self.model.generator_optimizer = tf.keras.optimizers.legacy.Adam(self.model.lr_decayed_fn)#, beta_1=0.0)
       # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.Adam(self.model.lr_decayed_fn)#, beta_1=0.0)
-      self.model.generator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)#, beta_1=0.0)
-      self.model.discriminator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)#, beta_1=0.0)
+      # self.model.generator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)
+      # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)
 
       with file_writer.as_default():
         tf.summary.image("In imgs", (self.model.val_data+1)/2, step=epoch, max_outputs=64)
@@ -149,7 +149,8 @@ class CustomModel(tf.keras.Model):
     self.discriminator = make_discriminator_model()
     print(self.discriminator.summary())
     self.classifier_model = model
-    self.classifier_model.load_weights('logs/20230704-173202/weights.47')
+    # self.classifier_model.load_weights('logs/20230704-173202/weights.47')
+    self.classifier_model.load_weights('logs/20230721-120604/weights.29')
 
   def generate(self):
     results_tuple = []
@@ -186,8 +187,17 @@ class CustomModel(tf.keras.Model):
           fake_output = self.discriminator(tf.concat([generated_images, tiled_labels], axis=-1), training=True)
 
           gen_loss = self.generator_loss(fake_output)
+          augmented_imgs_list = []
+          for img in tf.unstack(generated_images, axis=0):
+            rescaled_img = (img+1)/2*255
+            tf.Assert(tf.reduce_any(rescaled_img > 0.), [rescaled_img])
+            tf.Assert(tf.reduce_any(rescaled_img < 0.), [rescaled_img])
+            tf.Assert(tf.reduce_all(rescaled_img <= 1), [rescaled_img])
+            tf.Assert(tf.reduce_all(rescaled_img >= -1), [rescaled_img])
+            new_img = augment(rescaled_img, tf.zeros([]))[0]
+            augmented_imgs_list.append(new_img)
           augmented_imgs = \
-            tf.stack([augment((img+1)/2*255, tf.zeros([]))[0] for img in tf.unstack(generated_images, axis=0)], axis=0)
+            tf.stack(augmented_imgs_list, axis=0)
           tf.debugging.assert_less_equal(augmented_imgs, 1.)
           tf.debugging.assert_greater_equal(augmented_imgs, -1.)
           class_loss = \

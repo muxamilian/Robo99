@@ -48,7 +48,8 @@ for i in range(min(64,batch_size)):
     plt.imshow(data[i].numpy()/2+0.5)
     plt.xlabel(str(labels[i].numpy().item()))
 plt.tight_layout()
-# plt.show()
+plt.savefig('sample.pdf')
+
 
 model.fit(
     train_ds, 
