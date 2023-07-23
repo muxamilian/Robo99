@@ -37,8 +37,8 @@ model = tf.keras.applications.MobileNetV3Small(
 @tf.function
 def augment(image, label):
     image = tf.tile(image/255.*2.-1, (1, 1, 3))
-    tf.debugging.assert_less_equal(image, 1.)
-    tf.debugging.assert_greater_equal(image, -1.)
+    tf.Assert(tf.reduce_all(image <= 1), [image])
+    tf.Assert(tf.reduce_all(image >= -1), [image])
 
     # new_res = tf.random.uniform((), minval=4, maxval=image_shape[0]+1, dtype=tf.int32)
     new_res = tf.squeeze(tf.random.categorical(tf.math.log([normalized_probabilities]), 1, dtype=tf.int32))
@@ -55,7 +55,9 @@ def augment(image, label):
     image += random_vector
     image = tf.squeeze(image, 0)
     image = tfp.math.clip_by_value_preserve_gradient(image, -1., 1.)
-    tf.Assert(tf.reduce_any(image > 0.), [image])
-    tf.Assert(tf.reduce_any(image < 0.), [image])
+    # tf.Assert(tf.reduce_any(image > 0.), [image])
+    # tf.Assert(tf.reduce_any(image < 0.), [image])
+    # tf.Assert(tf.reduce_all(image <= 1), [image])
+    # tf.Assert(tf.reduce_all(image >= -1), [image])
 
     return image, label

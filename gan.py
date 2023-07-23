@@ -15,8 +15,8 @@ batch_size = 64
 
 multiplier = 3
 
-epochs = 30
-lr = 5e-4
+epochs = 50
+lr = 1e-4
 
 def make_generator_model():
   gen = tf.keras.Sequential(
@@ -69,13 +69,11 @@ def make_discriminator_model():
 @tf.function
 def augment_simple(image, label):
     image = image/255.*2.-1
-    tf.debugging.assert_less_equal(image, 1.)
-    tf.debugging.assert_greater_equal(image, -1.)
+    # tf.Assert(tf.reduce_all(image <= 1), [image])
+    # tf.Assert(tf.reduce_all(image >= -1), [image])
     image = tfp.math.clip_by_value_preserve_gradient(image, -1., 1.)
-    tf.Assert(tf.reduce_any(image > 0.), [image])
-    tf.Assert(tf.reduce_any(image < 0.), [image])
-    tf.Assert(tf.reduce_all(image <= 1), [image])
-    tf.Assert(tf.reduce_all(image >= -1), [image])
+    # tf.Assert(tf.reduce_any(image > 0.), [image])
+    # tf.Assert(tf.reduce_any(image < 0.), [image])
     return image, label
 
 dataset = tf.keras.utils.image_dataset_from_directory(
@@ -176,7 +174,7 @@ class CustomModel(tf.keras.Model):
       # loss_tradeoff = tf.zeros([batch_size], dtype=tf.float32)
       noise = tf.random.normal([batch_size, noise_dim])
 
-      tf.assert_equal(tf.shape(labels), (batch_size,))
+      # tf.assert_equal(tf.shape(labels), (batch_size,))
       labels_one_hot = tf.one_hot(labels, depth=num_chars)
 
       with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
@@ -190,24 +188,20 @@ class CustomModel(tf.keras.Model):
           augmented_imgs_list = []
           for img in tf.unstack(generated_images, axis=0):
             rescaled_img = (img+1)/2*255
-            tf.Assert(tf.reduce_any(rescaled_img > 0.), [rescaled_img])
-            tf.Assert(tf.reduce_any(rescaled_img < 0.), [rescaled_img])
-            tf.Assert(tf.reduce_all(rescaled_img <= 1), [rescaled_img])
-            tf.Assert(tf.reduce_all(rescaled_img >= -1), [rescaled_img])
             new_img = augment(rescaled_img, tf.zeros([]))[0]
             augmented_imgs_list.append(new_img)
           augmented_imgs = \
             tf.stack(augmented_imgs_list, axis=0)
-          tf.debugging.assert_less_equal(augmented_imgs, 1.)
-          tf.debugging.assert_greater_equal(augmented_imgs, -1.)
+          tf.debugging.Assert(tf.reduce_all(augmented_imgs <= 1), [augmented_imgs])
+          tf.debugging.Assert(tf.reduce_all(augmented_imgs >= -1), [augmented_imgs])
           class_loss = \
             self.sparse_categorical_cross_entropy(
               labels, 
               self.classifier_model(augmented_imgs, training=False))
           # class_loss = 0
           disc_loss = self.discriminator_loss(real_output, fake_output)
-          tf.assert_equal(tf.shape(gen_loss)[0], batch_size)
-          tf.assert_equal(tf.shape(class_loss)[0], batch_size)
+          # tf.assert_equal(tf.shape(gen_loss)[0], batch_size)
+          # tf.assert_equal(tf.shape(class_loss)[0], batch_size)
           gen_grad_loss = tf.reduce_mean((1-loss_tradeoff)*gen_loss + loss_tradeoff*class_loss)
           # gen_grad_loss = tf.reduce_mean(gen_loss)
 
@@ -229,7 +223,7 @@ class CustomModel(tf.keras.Model):
 
 model = CustomModel()
 
-model.compile()
+model.compile(run_eagerly=True)
 
 # steps_per_epoch = 1000
 batches_per_epoch = len(dataset)
