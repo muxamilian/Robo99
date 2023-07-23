@@ -1,6 +1,7 @@
 import random
 import tensorflow as tf
 import tensorflow_probability as tfp
+import keras_cv
 
 physical_devices = tf.config.list_physical_devices('GPU')
 try:
@@ -17,14 +18,8 @@ num_chars = 62
 image_shape = [64, 64]
 input_shape = (*image_shape, 3)
 
-all_results = []
-
-for i in range(4, image_shape[0]+1): 
-   if image_shape[0] % i == 0:
-      all_results.append(i)
-
-normalized_probabilities = [1 / len(all_results) if i in all_results else 0. for i in range(image_shape[0]+1)]
-print('all_results', all_results, 'normalized_probabilities', normalized_probabilities)
+uniform_sampler = keras_cv.UniformFactorSampler(0.0, image_shape[0]/6)
+blurrer = keras_cv.layers.RandomGaussianBlur(image_shape, uniform_sampler)
 
 model = tf.keras.applications.MobileNetV3Small(
     input_shape=input_shape,
@@ -40,20 +35,12 @@ def augment(image, label):
     tf.Assert(tf.reduce_all(image <= 1), [image])
     tf.Assert(tf.reduce_all(image >= -1), [image])
 
-    # new_res = tf.random.uniform((), minval=4, maxval=image_shape[0]+1, dtype=tf.int32)
-    new_res = tf.squeeze(tf.random.categorical(tf.math.log([normalized_probabilities]), 1, dtype=tf.int32))
-    random_vector_downscaled = tf.random.normal((1,new_res,new_res,1), stddev=0.5)
-    random_vector = tf.random.normal((1,*image_shape,1), stddev=0.5)
+    random_vector_first = tf.random.normal((*image_shape,1), stddev=0.25)
+    random_vector = tf.random.normal((*image_shape,1), stddev=0.25)
     
-    image = tf.expand_dims(image, 0)
-    # image = tf.image.resize(image, (new_res,new_res), method=tf.image.ResizeMethod.AREA)
-    image = tf.reshape(image, [1, new_res, image_shape[0]//new_res, new_res, image_shape[1]//new_res, 3])
-    image = tf.reduce_mean(image, axis=4)
-    image = tf.reduce_mean(image, axis=2)
-    image += random_vector_downscaled
-    image = tf.image.resize(image, image_shape, tf.image.ResizeMethod.BILINEAR)
+    image += random_vector_first
+    image = blurrer.augment_image(image, blurrer.get_random_transformation())
     image += random_vector
-    image = tf.squeeze(image, 0)
     image = tfp.math.clip_by_value_preserve_gradient(image, -1., 1.)
     # tf.Assert(tf.reduce_any(image > 0.), [image])
     # tf.Assert(tf.reduce_any(image < 0.), [image])

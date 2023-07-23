@@ -26,9 +26,11 @@ train_ds, val_ds = datasets
 print(model.summary())
 
 logdir = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+os.makedirs(logdir, exist_ok=True)
+
 model.compile(
-    # optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=0.01),
-    optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.001),
+    optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=0.01),
+    # optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.001),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy']
     )
@@ -48,13 +50,13 @@ for i in range(min(64,batch_size)):
     plt.imshow(data[i].numpy()/2+0.5)
     plt.xlabel(str(labels[i].numpy().item()))
 plt.tight_layout()
-plt.savefig('sample.pdf')
+plt.savefig(logdir+'/sample.pdf')
 
 
 model.fit(
     train_ds, 
     validation_data=val_ds,
-    epochs=100,
+    epochs=50,
     shuffle=False,
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(

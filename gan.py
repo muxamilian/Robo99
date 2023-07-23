@@ -15,7 +15,7 @@ batch_size = 64
 
 multiplier = 3
 
-epochs = 50
+epochs = 30
 lr = 1e-4
 
 def make_generator_model():
