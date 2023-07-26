@@ -18,7 +18,7 @@ num_chars = 62
 image_shape = [64, 64]
 input_shape = (*image_shape, 3)
 
-uniform_sampler = keras_cv.UniformFactorSampler(0.0, image_shape[0]/6)
+uniform_sampler = keras_cv.UniformFactorSampler(0.01, image_shape[0]/6)
 blurrer = keras_cv.layers.RandomGaussianBlur(image_shape, uniform_sampler)
 
 model = tf.keras.applications.MobileNetV3Small(
@@ -40,6 +40,7 @@ def augment(image, label):
     
     image += random_vector_first
     image = blurrer.augment_image(image, blurrer.get_random_transformation())
+    # tf.debugging.assert_all_finite(image, f'{image}')
     image += random_vector
     image = tfp.math.clip_by_value_preserve_gradient(image, -1., 1.)
     # tf.Assert(tf.reduce_any(image > 0.), [image])

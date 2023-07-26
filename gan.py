@@ -16,7 +16,7 @@ batch_size = 64
 multiplier = 3
 
 epochs = 30
-lr = 1e-4
+lr = 1e-2
 
 def make_generator_model():
   gen = tf.keras.Sequential(
@@ -148,7 +148,9 @@ class CustomModel(tf.keras.Model):
     print(self.discriminator.summary())
     self.classifier_model = model
     # self.classifier_model.load_weights('logs/20230704-173202/weights.47')
-    self.classifier_model.load_weights('logs/20230721-120604/weights.29')
+    # self.classifier_model.load_weights('logs/20230721-120604/weights.29')
+    # self.classifier_model.load_weights('logs/20230723-175517/weights.23')
+    self.classifier_model.load_weights('logs/20230723-175517/weights.26')
 
   def generate(self):
     results_tuple = []

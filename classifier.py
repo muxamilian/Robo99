@@ -29,7 +29,7 @@ logdir = "logs/" + datetime.now().strftime("%Y%m%d-%H%M%S")
 os.makedirs(logdir, exist_ok=True)
 
 model.compile(
-    optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=0.01),
+    optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=1.),
     # optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=0.001),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
     metrics=['accuracy']
@@ -56,11 +56,12 @@ plt.savefig(logdir+'/sample.pdf')
 model.fit(
     train_ds, 
     validation_data=val_ds,
-    epochs=50,
+    epochs=30,
     shuffle=False,
     callbacks=[
         tf.keras.callbacks.ModelCheckpoint(
             os.path.join(logdir, "weights.{epoch:02d}"), verbose=1, save_weights_only=True, save_best_only=True, monitor='val_accuracy'),
-        tf.keras.callbacks.TensorBoard(log_dir=logdir)
+        tf.keras.callbacks.TensorBoard(log_dir=logdir),
+        tf.keras.callbacks.TerminateOnNaN()
     ]
 )
