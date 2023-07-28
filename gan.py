@@ -5,18 +5,18 @@ from datetime import datetime
 import os
 from common import *
 
-# dataset_name = 'dataset'
-dataset_name = 'dataset-capitals'
+dataset_name = 'dataset'
+# dataset_name = 'dataset-capitals'
 if dataset_name == 'dataset-capitals':
   num_chars = 26
 
 noise_dim = 128
 batch_size = 64
 
-multiplier = 3
+multiplier = 6
 
-epochs = 30
-lr = 1e-2
+epochs = 15
+lr = 1e-4
 
 def make_generator_model():
   gen = tf.keras.Sequential(
@@ -103,12 +103,12 @@ class CustomCallback(tf.keras.callbacks.Callback):
 
       self.model.lr_decayed_fn = tf.keras.optimizers.schedules.CosineDecay(lr, epochs*batches_per_epoch)
 
-      self.model.generator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
-      self.model.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
+      # self.model.generator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
+      # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.SGD(self.model.lr_decayed_fn)
       # self.model.generator_optimizer = tf.keras.optimizers.legacy.Adam(self.model.lr_decayed_fn)#, beta_1=0.0)
       # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.Adam(self.model.lr_decayed_fn)#, beta_1=0.0)
-      # self.model.generator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)
-      # self.model.discriminator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)
+      self.model.generator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)
+      self.model.discriminator_optimizer = tf.keras.optimizers.legacy.RMSprop(self.model.lr_decayed_fn)
 
       with file_writer.as_default():
         tf.summary.image("In imgs", (self.model.val_data+1)/2, step=epoch, max_outputs=64)
@@ -151,6 +151,7 @@ class CustomModel(tf.keras.Model):
     # self.classifier_model.load_weights('logs/20230721-120604/weights.29')
     # self.classifier_model.load_weights('logs/20230723-175517/weights.23')
     self.classifier_model.load_weights('logs/20230723-175517/weights.26')
+    print(self.classifier_model.summary())
 
   def generate(self):
     results_tuple = []
@@ -224,7 +225,6 @@ class CustomModel(tf.keras.Model):
       }
 
 model = CustomModel()
-
 model.compile(run_eagerly=True)
 
 # steps_per_epoch = 1000
