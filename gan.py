@@ -274,7 +274,22 @@ if args.mode == 'train':
         ]
     )
 elif args.mode == 'export':
-    # Current max accuracy is 0.986
+    # Current max accuracy is 0.9861290323734283
+    # weights.01 0.974354835152626
+    # weights.02 0.9675806391239167
+    # weights.03 0.9683870869874954
+    # weights.04 0.973387091755867
+    # weights.05 0.9633870851993561
+    # weights.06 0.9817741948366165
+    # weights.07 0.9861290323734283
+    # weights.08 0.979354836344719
+    # weights.09 0.979838707447052
+    # weights.10 0.9772580629587173
+    # weights.11 0.9820967727899551
+    # weights.12 0.979032256603241
+    # weights.13 0.9829032278060913
+    # weights.14 0.978225804567337
+    # weights.15 0.9759677386283875
     path = 'gan_logs/20230728-142502/'
     all_weights = [item[:-len('.index')] for item in os.listdir(path) if '.index' in item]
     out_dir = path.split('/')[-1]
@@ -298,6 +313,8 @@ elif args.mode == 'classify_fonts':
   if os.path.isfile(out_file_name):
     with open(out_file_name) as fr:
       all_accuracies = [float(item) for item in [item.strip() for item in fr.read().split('\n')] if len(item) > 0]
+    if len(all_accuracies) > 0:
+      current_max = max(all_accuracies)
   with open(out_file_name, 'a', buffering=1) as fw:
     fonts_to_analyze = num_fonts
     all_fonts = list(range(num_fonts))
