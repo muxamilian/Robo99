@@ -36,6 +36,8 @@ model.compile(
     )
 
 print(model.summary())
+mapping = list('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789')
+assert len(mapping) == num_chars
 
 # data, labels = next(generator())
 first_data = next(val_ds.__iter__())
@@ -47,11 +49,14 @@ for i in range(min(64,batch_size)):
     plt.xticks([])
     plt.yticks([])
     plt.grid(False)
-    plt.imshow(data[i].numpy()/2+0.5)
-    plt.xlabel(str(labels[i].numpy().item()))
+    plt.imshow(1.-(data[i].numpy()/2+0.5))
+    plt.xlabel(str(mapping[labels[i].numpy().item()]))
 plt.tight_layout()
-plt.savefig(logdir+'/sample.pdf')
+plt.savefig(logdir+'/sample.pdf',bbox_inches='tight', pad_inches=0)
+plt.savefig(logdir+'/sample.svg',bbox_inches='tight', pad_inches=0)
+plt.savefig(logdir+'/sample.png',bbox_inches='tight', pad_inches=0)
 
+quit()
 
 model.fit(
     train_ds, 

@@ -227,7 +227,7 @@ model.compile(run_eagerly=True)
 
 def analyze(raw_imgs, out_path, font_name):
   accuracies = []
-  big_square = np.zeros([64*8, 64*8], dtype=np.uint8)
+  big_square = np.ones([64*8, 64*8], dtype=np.uint8)*255
   for j, img in enumerate(raw_imgs):
     big_square[(j//8)*64:((j//8)+1)*64, (j%8)*64:((j%8)+1)*64] = np.squeeze(img.numpy().astype(np.uint8))
   for _ in range(100):
