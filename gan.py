@@ -231,7 +231,7 @@ def analyze(raw_imgs, out_path, font_name):
   for j, img in enumerate(raw_imgs):
     big_square[(j//8)*64:((j//8)+1)*64, (j%8)*64:((j%8)+1)*64] = np.squeeze(img.numpy().astype(np.uint8))
   for _ in range(100):
-    imgs, _ = list(zip(*[augment(img, tf.zeros([])) for img in raw_imgs]))
+    imgs, _ = list(zip(*[augment(255-img, tf.zeros([])) for img in raw_imgs]))
     imgs = tf.stack(imgs, axis=0)
     predictions = tf.math.argmax(model.classifier_model(imgs, training=False), axis=-1, output_type=tf.int32)
     tf.Assert(predictions.shape[0] == imgs.shape[0], [f'{len(predictions.shape)}, {len(imgs)}'])
