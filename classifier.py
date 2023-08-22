@@ -56,8 +56,6 @@ plt.savefig(logdir+'/sample.pdf',bbox_inches='tight', pad_inches=0)
 plt.savefig(logdir+'/sample.svg',bbox_inches='tight', pad_inches=0)
 plt.savefig(logdir+'/sample.png',bbox_inches='tight', pad_inches=0)
 
-quit()
-
 model.fit(
     train_ds, 
     validation_data=val_ds,

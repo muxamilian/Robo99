@@ -300,10 +300,11 @@ elif args.mode == 'export':
     for i, weight_file_name in tqdm(enumerate(all_weights)): 
       if 'weights.07' not in weight_file_name:
         continue
-      print(f'{weight_file_name=}')
+      print(f'{weight_file_name=} ', end='')
       p = subprocess.Popen(f'ffmpeg -y -f image2pipe -vcodec png -r 20 -i - -f apng -plays 0 -r 20 {out_path}/{weight_file_name}.png'.split(' '), stdin=subprocess.PIPE)
-      for tradeoff in tqdm(np.linspace(0., 1., 50)):
-        print(f'{tradeoff=}')
+      steps = 50
+      for step_num, tradeoff in enumerate(np.linspace(0., 1., steps)):
+        print(f'{step_num+1}/{steps} {tradeoff=} ', end='')
         model.load_weights(path + weight_file_name)
         out_imgs = model.generator(tf.concat([seed, tf.tile(tf.reshape(tradeoff.item(), [1, 1]), (seed.shape[0], 1))], axis=-1), training=False)
         out_imgs = tf.squeeze(out_imgs)
@@ -313,7 +314,8 @@ elif args.mode == 'export':
           converted = 255-np.round((item.numpy()+1.)/2.*255).astype(np.uint8)
           cv2.imwrite(f'{out_path}/{weight_file_name}/{j}.png', converted)
           raw_imgs.append(tf.reshape(tf.constant(converted, dtype=tf.float32), (64, 64, 1)))
-        analyze(raw_imgs, out_path, f'{weight_file_name}_{tradeoff}')
+        accuracy = analyze(raw_imgs, out_path, f'{weight_file_name}_{tradeoff}')
+        print(f'{accuracy=}')
         im = PIL.Image.open(f'{out_path}/{weight_file_name}_{tradeoff}.png')
         im.save(p.stdin, 'PNG')
     p.stdin.close()
