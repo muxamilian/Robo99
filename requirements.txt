@@ -1,0 +1,10 @@
+Pillow
+tensorflow
+tensorflow-probability
+opencv-python
+tqdm
+matplotlib
+h5py
+keras-core
+keras-cv
+numpy
