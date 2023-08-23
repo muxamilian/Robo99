@@ -28,7 +28,8 @@ lr = 1e-4
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('-m', '--mode', default='train')      # option that takes a value
+parser.add_argument('-m', '--mode', default='train', help='Use "train" to train a GAN, or "export" to analyze a training run and output figures.')
+parser.add_argument( '--gan-weights', default='gan_logs/20230728-142502/', help='Path to weights when using "export"')
 
 args = parser.parse_args()
 print(args)
@@ -292,20 +293,18 @@ elif args.mode == 'export':
     # weights.13 0.9829032278060913
     # weights.14 0.978225804567337
     # weights.15 0.9759677386283875
-    path = 'gan_logs/20230728-142502/'
-    all_weights = [item[:-len('.index')] for item in os.listdir(path) if '.index' in item]
-    out_dir = path.split('/')[-1]
-    out_path = 'out_imgs/' + out_dir
+    all_weights = [item[:-len('.index')] for item in os.listdir(args.gan_weights) if '.index' in item]
+    out_path = 'out_imgs/'
     os.makedirs(out_path, exist_ok=True)
     for i, weight_file_name in tqdm(enumerate(all_weights)): 
-      if 'weights.07' not in weight_file_name:
-        continue
+      # if 'weights.07' not in weight_file_name:
+      #   continue
       print(f'{weight_file_name=} ', end='')
       p = subprocess.Popen(f'ffmpeg -y -f image2pipe -vcodec png -r 20 -i - -f apng -plays 0 -r 20 {out_path}/{weight_file_name}.png'.split(' '), stdin=subprocess.PIPE)
       steps = 50
       for step_num, tradeoff in enumerate(np.linspace(0., 1., steps)):
         print(f'{step_num+1}/{steps} {tradeoff=} ', end='')
-        model.load_weights(path + weight_file_name)
+        model.load_weights(args.gan_weights + '/' + weight_file_name)
         out_imgs = model.generator(tf.concat([seed, tf.tile(tf.reshape(tradeoff.item(), [1, 1]), (seed.shape[0], 1))], axis=-1), training=False)
         out_imgs = tf.squeeze(out_imgs)
         os.makedirs(f'{out_path}/{weight_file_name}', exist_ok=True)
