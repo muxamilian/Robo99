@@ -13,7 +13,7 @@ h1, h2, h3, h4 { font-weight: normal; }
 
 <body>
 <h1>Robo99 (<a href="https://github.com/muxamilian/Robo99">Repo</a>)</h1>
-Robo99 (<a href="https://github.com/muxamilian/Robo99/raw/main/Robo99.ttf">Robo99.ttf</a>) is a readability-optimized font generated using Machine Learning. (The glyphs were generated using Machine Learning. The font itself including the spacing between glyphs was automatically created using <em>FontForge</em>.) This whole page is written in Robo99. The goals were to create a font that is
+Robo99 (<a href="https://github.com/muxamilian/Robo99/raw/main/Robo99.ttf">Robo99.ttf</a>) is a readability-optimized font whose glyphs were generated using Machine Learning. This whole page is written in Robo99. The goals were to create a font that is
 <ul>
     <li>as readable as possible</li>
     <li>as "normal" as possible</li>
@@ -25,16 +25,18 @@ To achieve this, I created a modified <em>Generative Adversarial Neural Network<
     My intuition is that when I take the center of the generator's probability distribution (a vector of only 0s), the most "normal" font is the result. 
 
 <h2>Generator can generate each character individually</h2>
-    The generator knows which character it is supposed to generate (a, b, c, etc.), and the discriminator knows the same information. This makes sure that one can control which character the generator is supposed to output. This is also called a <em>Conditional</em> GAN (CGAN). 
+    The generator knows which character it is supposed to generate (a, b, c, etc.), and the discriminator knows the same information. This makes sure that one can control which character the generator is supposed to output. This is also called a <em>Conditional GAN</em> (CGAN). 
     
 <h2>Generator aims to make font readable</h2>
-    In addition to the regular loss of the generator, which encourages realistic outputs which satisfy the discriminator, I added a pretrained (frozen) font classifier, which encourages the generator to create outputs, which are clearly recognizable. For example, if the generator outputs an "R", noise is added to the output and it is blurred randomly. Then the font classifier has to classify it correctly as an "R". This classification loss is added to the loss of the generator. 
+    In addition to the regular loss of the generator, which encourages realistic outputs which satisfy the discriminator, I added a pretrained (frozen) font classifier, which encourages the generator to create outputs which are clearly recognizable. For example, if the generator outputs an "R", noise is added to the output and it is blurred randomly. Then the font classifier has to classify it correctly as an "R". This classification loss is added to the loss of the generator. 
     <div style="height: 0.5em"></div>
-    Speficially, each pixel has a value between 0 and 1. Random gaussian noise is applied to each pixel, with a standard deviation of 0.125. Then a blur with a random standard deviation between 0 and 15 pixels is applied. After that, random gaussian noise with a standard deviation of 0.125 is applied to each pixel again. Finally, each pixel is clipped to a value between 0 and 1. <br>
+    Speficially, each pixel has a value between 0 (black) and 1 (white). Random gaussian noise is applied to each pixel, with a standard deviation of 0.125. Then a blur with a random standard deviation between 0 and 15 pixels is applied. After that, random gaussian noise with a standard deviation of 0.125 is applied to each pixel again. Finally, each pixel is clipped to a value between 0 and 1. 
+    <div style="height: 0.5em"></div>
+    This figure shows 64 characters from a <a href="https://github.com/erikbern/deep-fonts">dataset</a>, to which noise and blur were added. <br>
     <img src="https://github.com/muxamilian/Robo99/raw/main/sample.svg" style="width: 400px">
     
 <h2>Tradeoff between satisfying the discriminator and the classifier</h2>
-    The generator has an extra parameter, which controls how much emphasis should be put on readability. It is a number between 0 and 1, where 0 means that the generator should only focus on creating a realistic font, which satisfies the discriminator. 1 means that the generator should only focus on generating a font that is as easily recognizable as possible under the presence of loss and blur. 
+    The generator has an extra parameter, which controls how much emphasis should be put on readability. It is a number between 0 and 1, where 0 means that the generator should only focus on creating a realistic character, which satisfies the discriminator. 1 means that the generator should only focus on generating a character that can be easily recognized by the classifier under the presence of loss and blur. 
     <div style="height: 0.5em"></div>
     The following animation shows how the output font changes, when the readability parameter of the generator is changed from 0 to 1 slowly. 
     <br/>
@@ -47,9 +49,9 @@ After installing the requirements (<code>pip install -r requirements.txt</code>)
 <code>python3 gan.py</code><br>
 <div style="height: 0.75em"></div>
 You can evaluate the readability of the generated fonts by running <br>
-<code>python3 gan.py -m export</code><br>
+<code>python3 gan.py -m export --gan-weights gan_logs/20230728-142502/</code><br>
 <div style="height: 0.25em"></div>
-The output of the command is also the figure above, which shows how the characters change when the tradeoff between satisfying the discriminator and the classifier is changed. The text output in the terminal shows why the font is called Robo99. When the tradeoff between satisfying the discriminator and the classifier is 1, the font achieves its highest readability score, which is 99%. 
+You can also use your own weights, if you train your own model. The command also outputs the figure from above, which shows how the characters change when the tradeoff between satisfying the discriminator and the classifier is changed. The text output in the terminal shows why the font is called Robo99. When the tradeoff between satisfying the discriminator and the classifier is 1, the font achieves its highest readability score, which is 99%. 
 <h2>Acknowledgements</h2>
 The font dataset was taken from <a href="https://github.com/erikbern/deep-fonts">https://github.com/erikbern/deep-fonts</a>.
 </body>
